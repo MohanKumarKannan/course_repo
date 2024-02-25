@@ -2,7 +2,7 @@
 from flask import Flask, render_template
 import random
 
-app = Flask(__name__)
+application = Flask(__name__)
 
 # List of dynamic texts
 dynamic_texts = [
@@ -13,11 +13,11 @@ dynamic_texts = [
     "It is pitch dark. You are likely to be eaten by a grue."
 ]
 
-@app.route('/')
+@application.route('/')
 def index():
     # Randomly select a dynamic text
     dynamic_text = random.choice(dynamic_texts)
     return render_template('index.html', dynamic_text=dynamic_text)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    application.run(debug=True)
