@@ -1,0 +1,26 @@
+#app -> db -> mounted drive
+
+
+#01 - create volume
+
+docker volume create myapp-vol
+
+#create network
+docker network create myapp-net
+
+#Create database and put it in myapp-net
+# Mount volume should not specify port as it not expose outside
+
+docker run -d --name mydb \
+-e MYSQL_ROOT_PASSWORD=changeit  \
+--mount type=volume,src=myapp-vol, dst=/var/lib/mysql stackupiss/northwind-db:v1
+
+
+#Create Application and put the application in myappnet
+
+docker run -d -p 8080:3000 --name myapp \
+	--network myapp-net \
+	-e DB_HOST=my_db \
+	-e DB_USER=root \
+	-e DB_PASSWORD=changeit \
+	stackupiss/northwind-app:v1
