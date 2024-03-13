@@ -1,0 +1,39 @@
+---
+apiVersion: v1 
+kind: Service
+metadata:
+  name: bggdb-svc
+  namespace: bggns
+  labels:
+    app: bggdb
+    name: bgg-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: bgg
+    name: bggdb-po
+
+
+---
+apiVersion: v1 
+kind: Service
+metadata:
+  name: bggapp-svc
+  namespace: bggns
+  labels:
+    app: bgg
+    name: bggapp-svc
+spec:
+  # type: ClusterIP
+  # type: NodePort # 
+  type: LoadBalancer
+  selector:
+    app: bgg
+    name: bggapp-po
+  ports:
+  - name: svc-web-port
+    port: 3000
+    targetPort: web-port
+  - name: svc-metrics-port
+    port: 3100
+    targetPort: metrics-port
