@@ -1,0 +1,135 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: csns
+
+--- # add a configmap and a pvc to the deployment
+# for pvc, create persistentvolumeclaim, add volume to the deployment, and mount the volume to the container
+apiVersion: v1
+kind: ConfigMap # just creates some temporary files in the filesystem
+metadata:
+  name: cs-cm
+  namespace: csns
+  labels:
+    app: csapp
+    name: cs-cm
+data:
+  TZ: Asia/Singapore
+  DEFAULT_WORKSPACE: /config/workspace
+  PROXY_DOMAIN: code-167.172.6.249.nip.io
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cs-secret
+  namespace: csns
+  labels:
+    app: csapp
+type: Opaque
+data:
+  PASSWORD: cGFzc3dvcmQ=
+  SUDO_PASSWORD: cGFzc3dvcmQ=
+---
+apiVersion: v1
+kind: PersistentVolumeClaim # pvc is namespace-scoped. persistentvolume is not namespace-scoped
+metadata:
+  name: csapp-pvc
+  namespace: csns
+  labels:
+    app: csapp
+    name: csapp-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: do-block-storage # get storage classes by k get sc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: csapp-deploy
+  namespace: csns
+  labels:
+    app: csapp
+    type: deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csapp
+      type: be
+  template:
+    metadata:
+      name: csapp-svc
+      namespace: csns
+      labels:
+        app: csapp
+        type: be
+    spec:
+      volumes:
+        - name: workspace-vol
+          persistentVolumeClaim:
+            claimName: csapp-pvc
+      containers:
+        - name: csapp-container
+          image: lscr.io/linuxserver/code-server:latest
+          imagePullPolicy: IfNotPresent # Always, IfNotPresent, Never
+          envFrom:
+            - configMapRef:
+                name: cs-cm
+            - secretRef:
+                name: cs-secret
+          ports:
+            - name: csapp-be-port
+              containerPort: 8443
+              protocol: TCP
+          volumeMounts:
+            - name: workspace-vol
+              mountPath: /config/workspace
+---
+apiVersion: v1 # if core no need to write core/v1, eg just v1
+kind: Service
+metadata:
+  name: csapp-svc
+  namespace: csns
+  labels:
+    app: csapp
+    type: csapp-svc
+spec:
+  type: ClusterIP
+  # type: NodePort
+  # type: LoadBalancer
+  selector:
+    app: csapp
+    type: be
+  ports:
+    - name: csapp-svc-be-port
+      port: 8443
+      targetPort: csapp-be-port
+#  k get svc -A : will list all services in all namespaces
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: csapp-ingress
+  namespace: csns
+  labels:
+    app: csapp
+    type: csapp-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: code-167.172.6.249.nip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: csapp-svc
+                port:
+                  number: 8443
