@@ -1,0 +1,39 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+namespace: dovns
+
+commonLabels:
+  env: test
+  dept:  eng
+
+namePrefix: test- 
+
+replicas:
+  - name: dov-deploy
+    count: 1
+
+images:
+    - name: chukmunnlee/dov-bear
+      newTag: v4
+
+configMapGenerator:
+  - name: dov-cm
+    namespace: myns
+    behavior: merge
+    literals:
+      - INSTANCE_NAME="This is from kustomize config generator"
+
+
+patches:
+- target:
+    group: apps
+    version: v1 
+    kind: Deployment
+    name: dov-deploy
+  path: patch.yaml
+    
+    
